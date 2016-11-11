@@ -11,6 +11,9 @@ from tornado.options import define, options
 from basehandler import BaseHandler
 
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+
 import pickle
 from bson.binary import Binary
 import json
@@ -24,62 +27,100 @@ class PrintHandlers(BaseHandler):
         self.set_header("Content-Type", "application/json")
         self.write(self.application.handlers_string.replace('),','),\n'))
 
+class GetClasses(BaseHandler):
+    def get(self):
+        l=[];
+        if self.db.labeledinstances.count() == 0:
+            self.write_json({"error": "you have no classes bro"})
+        else:
+            for a in self.db.labeledinstances:
+                l.append(a['label'])
+
+            self.write_json({"classes":l})
+
+
 class UploadLabeledDatapointHandler(BaseHandler):
     def post(self):
         '''Save data point and class label to database
         '''
         data = json.loads(self.request.body.decode("utf-8"))
 
+        # print(data)
+
         vals = data['feature']
         fvals = [float(val) for val in vals]
         label = data['label']
-        sess  = data['dsid']
+        # sess  = data['dsid']
 
         dbid = self.db.labeledinstances.insert(
-            {"feature":fvals,"label":label,"dsid":sess}
+            # {"feature":fvals,"label":label,"dsid":sess}
+            {"feature":fvals,"label":label}
             );
         self.write_json({"id":str(dbid),"feature":fvals,"label":label})
 
-class RequestNewDatasetId(BaseHandler):
+# class RequestNewDatasetId(BaseHandler):
+#     def get(self):
+#         '''Get a new dataset ID for building a new dataset
+#         '''
+#         a = self.db.labeledinstances.find_one(sort=[("dsid", -1)])
+#         newSessionId = float(a['dsid'])+1
+#         self.write_json({"dsid":newSessionId})
+
+class SetParameters(BaseHandler):
+    def post(self):
+        data = json.loads(self.request.body.decode("utf-8"))
+        self.KNeighborsParamN = data['KNeighborsParam']
+        self.RandomForestParamN = data['RandomForestParam']
+
+class ClearDataset(BaseHandler):
     def get(self):
-        '''Get a new dataset ID for building a new dataset
-        '''
-        a = self.db.labeledinstances.find_one(sort=[("dsid", -1)])
-        newSessionId = float(a['dsid'])+1
-        self.write_json({"dsid":newSessionId})
+        self.db.labeledinstances.remove()
+        self.db.models.remove()
+        self.clf = {}
 
 class UpdateModelForDatasetId(BaseHandler):
     def get(self):
         '''Train a new model (or update) for given dataset ID
         '''
-        dsid = self.get_int_arg("dsid",default=0)
+        # dsid = self.get_int_arg("dsid",default=0)     ///remoivng dsid stuff
 
         # create feature vectors from database
         f=[];
-        for a in self.db.labeledinstances.find({"dsid":dsid}):
+        for a in self.db.labeledinstances:
             f.append([float(val) for val in a['feature']])
 
         # create label vector from database
         l=[];
-        for a in self.db.labeledinstances.find({"dsid":dsid}):
+        for a in self.db.labeledinstances:
             l.append(a['label'])
 
         # fit the model to the data
-        c1 = KNeighborsClassifier(n_neighbors=3);
-        acc = -1;
+        c1 = KNeighborsClassifier(n_neighbors=self.KNeighborsParamN);
+        acc1 = -1;
+        c2 = RandomForestClassifier(n_estimators=self.KNeighborsParamN);
+        acc2 = -1;
         if l:
             c1.fit(f,l) # training
-            lstar = c1.predict(f)
-            self.clf[dsid] = c1
-            acc = sum(lstar==l)/float(len(l))
-            bytes = pickle.dumps(c1)
-            self.db.models.update({"dsid":dsid},
-                {  "$set": {"model":Binary(bytes)}  },
+            c2.fit(f,l)
+            lstar1 = c1.predict(f)
+            lstar2 = c2.predict(f)
+            self.clf["KNeighbors"] = c1
+            self.clf["RandomForest"] = c2
+            acc1 = sum(lstar1==l)/float(len(l))
+            acc2 = sum(lstar2==l)/float(len(l))
+            bytes1 = pickle.dumps(c1)
+            bytes2 = pickle.dumps(c2)
+            self.db.models.update({"classifier":"KNeighbors"}, #change to classifier
+                {  "$set": {"model":Binary(bytes1)}  },
                 upsert=True)
+            self.db.models.update({"classifier":"RandomForest"},
+                {  "$set": {"model":Binary(bytes2)}  },
+                upsert=True)
+
 
         # send back the resubstitution accuracy
         # if training takes a while, we are blocking tornado!! No!!
-        self.write_json({"resubAccuracy":acc})
+        self.write_json({"resubAccuracyKN":acc1, "resubAccuracyRF":acc2})
 
 class PredictOneFromDatasetId(BaseHandler):
     def post(self):
@@ -87,17 +128,22 @@ class PredictOneFromDatasetId(BaseHandler):
         '''
         data = json.loads(self.request.body.decode("utf-8"))
 
-        vals = data['feature'];
-        fvals = [float(val) for val in vals];
+        vals = data['feature']
+        fvals = [float(val) for val in vals]
         fvals = np.array(fvals).reshape(1, -1)
-        dsid  = data['dsid']
+        # dsid  = data['dsid']
 
         # load the model from the database (using pickle)
         # we are blocking tornado!! no!!
-        if(dsid not in self.clf):
-            print('Loading Model From DB')
-            tmp = self.db.models.find_one({"dsid":dsid})
-            self.clf[dsid] = pickle.loads(tmp['model'])
-            
-        predLabel = self.clf[dsid].predict(fvals);
-        self.write_json({"prediction":str(predLabel)})
+
+        # if(dsid not in self.clf):
+        #     print('Loading Model From DB')
+        #     tmp = self.db.models.find_one({"dsid":dsid})
+        #     self.clf[dsid] = pickle.loads(tmp['model'])
+
+        if not self.clf:
+            self.write_json({"error":"No Models have been created"})
+        else:
+            predLabel1 = self.clf["KNeighbors"].predict(fvals)
+            predLabel2 = self.clf["RandomForest"].predict(fvals)
+            self.write_json({"predictionKN":str(predLabel1), "predictionRF":str(predLabel2)})

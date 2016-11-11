@@ -35,8 +35,9 @@ class Application(tornado.web.Application):
 
         handlers = [(r"/[/]?", BaseHandler),
                     (r"/Handlers[/]?",        skh.PrintHandlers),
+                    (r"/GetClasses[/]?",      skh.GetClasses),
                     (r"/AddDataPoint[/]?",    skh.UploadLabeledDatapointHandler),
-                    (r"/GetNewDatasetId[/]?", skh.RequestNewDatasetId),
+                    (r"/ClearDataset[/]?",    skh.ClearDataset),
                     (r"/UpdateModel[/]?",     skh.UpdateModelForDatasetId),
                     (r"/PredictOne[/]?",      skh.PredictOneFromDatasetId),
                     ]
@@ -56,6 +57,8 @@ class Application(tornado.web.Application):
 
         self.clf = {} # the classifier model (in-class assignment, you might need to change this line!)
         # but depending on your implementation, you may not need to change it  ¯\_(ツ)_/¯
+        self.KNeighborsParamN = 3
+        self.RandomForestParamN = 10
 
         settings = {'debug':True}
         tornado.web.Application.__init__(self, handlers, **settings)
