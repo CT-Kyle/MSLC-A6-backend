@@ -38,8 +38,9 @@ class Application(tornado.web.Application):
                     (r"/GetClasses[/]?",      skh.GetClasses),
                     (r"/AddDataPoint[/]?",    skh.UploadLabeledDatapointHandler),
                     (r"/ClearDataset[/]?",    skh.ClearDataset),
-                    (r"/UpdateModel[/]?",     skh.UpdateModelForDatasetId),
-                    (r"/PredictOne[/]?",      skh.PredictOneFromDatasetId),
+                    (r"/UpdateModel[/]?",     skh.UpdateModel),
+                    (r"/PredictOne[/]?",      skh.PredictOne),
+                    (r"/SetParameters[/]?",   skh.SetParameters),
                     ]
 
         self.handlers_string = str(handlers)

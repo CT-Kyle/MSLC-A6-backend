@@ -45,7 +45,7 @@ class UploadLabeledDatapointHandler(BaseHandler):
         '''
         data = json.loads(self.request.body.decode("utf-8"))
 
-        # print(data)
+        print(data)
 
         vals = data['feature']
         fvals = [float(val) for val in vals]
@@ -57,14 +57,6 @@ class UploadLabeledDatapointHandler(BaseHandler):
             {"feature":fvals,"label":label}
             );
         self.write_json({"id":str(dbid),"feature":fvals,"label":label})
-
-# class RequestNewDatasetId(BaseHandler):
-#     def get(self):
-#         '''Get a new dataset ID for building a new dataset
-#         '''
-#         a = self.db.labeledinstances.find_one(sort=[("dsid", -1)])
-#         newSessionId = float(a['dsid'])+1
-#         self.write_json({"dsid":newSessionId})
 
 class SetParameters(BaseHandler):
     def post(self):
@@ -78,7 +70,8 @@ class ClearDataset(BaseHandler):
         self.db.models.remove()
         self.clf = {}
 
-class UpdateModelForDatasetId(BaseHandler):
+
+class UpdateModel(BaseHandler):
     def get(self):
         '''Train a new model (or update) for given dataset ID
         '''
@@ -86,18 +79,18 @@ class UpdateModelForDatasetId(BaseHandler):
 
         # create feature vectors from database
         f=[];
-        for a in self.db.labeledinstances:
+        for a in self.db.labeledinstances.find({}):
             f.append([float(val) for val in a['feature']])
 
         # create label vector from database
         l=[];
-        for a in self.db.labeledinstances:
+        for a in self.db.labeledinstances.find({}):
             l.append(a['label'])
 
         # fit the model to the data
         c1 = KNeighborsClassifier(n_neighbors=self.KNeighborsParamN);
         acc1 = -1;
-        c2 = RandomForestClassifier(n_estimators=self.KNeighborsParamN);
+        c2 = RandomForestClassifier(n_estimators=self.RandomForestParamN);
         acc2 = -1;
         if l:
             c1.fit(f,l) # training
@@ -116,17 +109,20 @@ class UpdateModelForDatasetId(BaseHandler):
             self.db.models.update({"classifier":"RandomForest"},
                 {  "$set": {"model":Binary(bytes2)}  },
                 upsert=True)
+            # send back the resubstitution accuracy
+            # if training takes a while, we are blocking tornado!! No!!
+            self.write_json({"resubAccuracyKN":acc1, "resubAccuracyRF":acc2})
+        else:
+            self.write_json({"error": "You have no data to train on"})
+            raise HTTPError(404)
 
-
-        # send back the resubstitution accuracy
-        # if training takes a while, we are blocking tornado!! No!!
-        self.write_json({"resubAccuracyKN":acc1, "resubAccuracyRF":acc2})
-
-class PredictOneFromDatasetId(BaseHandler):
+class PredictOne(BaseHandler):
     def post(self):
         '''Predict the class of a sent feature vector
         '''
         data = json.loads(self.request.body.decode("utf-8"))
+
+        print(data)
 
         vals = data['feature']
         fvals = [float(val) for val in vals]
@@ -142,7 +138,9 @@ class PredictOneFromDatasetId(BaseHandler):
         #     self.clf[dsid] = pickle.loads(tmp['model'])
 
         if not self.clf:
-            self.write_json({"error":"No Models have been created"})
+            # self.write_json({"error":"No Models have been created"})
+            raise HTTPError(404)
+
         else:
             predLabel1 = self.clf["KNeighbors"].predict(fvals)
             predLabel2 = self.clf["RandomForest"].predict(fvals)
