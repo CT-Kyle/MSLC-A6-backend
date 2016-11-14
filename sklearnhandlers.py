@@ -118,7 +118,7 @@ class PredictOne(BaseHandler):
         '''Predict the class of a sent feature vector
         '''
         data = json.loads(self.request.body.decode("utf-8"))
-        print(data)
+        # print(data)
 
         vals = data['feature']
         fvals = [float(val) for val in vals]
@@ -127,6 +127,6 @@ class PredictOne(BaseHandler):
         if not self.clf:
             raise HTTPError(status_code=404, log_message="No models have been created")
         else:
-            predLabel1 = self.clf["KNeighbors"].predict(fvals)
-            predLabel2 = self.clf["RandomForest"].predict(fvals)
+            predLabel1 = self.clf["KNeighbors"].predict(fvals)[0]
+            predLabel2 = self.clf["RandomForest"].predict(fvals)[0]
             self.write_json({"predictionKN":str(predLabel1), "predictionRF":str(predLabel2)})
