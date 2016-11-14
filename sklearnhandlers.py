@@ -35,7 +35,6 @@ class GetClasses(BaseHandler):
             classes = self.db.labeledinstances.distinct('label')
             self.write_json({"classes":classes})
 
-
 class UploadLabeledDatapointsHandler(BaseHandler):
     def post(self):
         '''Save data point and class label to database
@@ -59,17 +58,17 @@ class UploadLabeledDatapointsHandler(BaseHandler):
 class SetParameters(BaseHandler):
     def post(self):
         data = json.loads(self.request.body.decode("utf-8"))
-        self.KNeighborsNParam = data['KNeighborsN']
-        self.KNeighborsAlgorithmParam = data['KNeighborsAlg']
-        self.RandomForestNParam = data['RandomForestN']
-
+        self.application.KNeighborsNParam = data['KNeighborsN']
+        self.application.KNeighborsAlgorithmParam = data['KNeighborsAlg']
+        self.application.RandomForestNParam = data['RandomForestN']
+        self.write_json({"status": "success"})
 
 class ClearDataset(BaseHandler):
     def get(self):
         self.db.labeledinstances.remove()
         self.db.models.remove()
         self.clf = {}
-
+        self.write_json({"status": "success"})
 
 class UpdateModel(BaseHandler):
     def get(self):
@@ -87,9 +86,9 @@ class UpdateModel(BaseHandler):
             l.append(a['label'])
 
         # fit the model to the data
-        c1 = KNeighborsClassifier(n_neighbors=self.KNeighborsNParam, algorithm=self.KNeighborsAlgorithmParam);
+        c1 = KNeighborsClassifier(n_neighbors=self.application.KNeighborsNParam, algorithm=self.application.KNeighborsAlgorithmParam);
         acc1 = -1;
-        c2 = RandomForestClassifier(n_estimators=self.RandomForestNParam);
+        c2 = RandomForestClassifier(n_estimators=self.application.RandomForestNParam);
         acc2 = -1;
         if l:
             c1.fit(f,l) # training
@@ -108,19 +107,17 @@ class UpdateModel(BaseHandler):
             self.db.models.update({"classifier":"RandomForest"},
                 {  "$set": {"model":Binary(bytes2)}  },
                 upsert=True)
+
             # send back the resubstitution accuracy
-            # if training takes a while, we are blocking tornado!! No!!
             self.write_json({"resubAccuracyKN":acc1, "resubAccuracyRF":acc2})
         else:
-            self.write_json({"error": "You have no data to train on"})
-            raise HTTPError(404)
+            raise HTTPError(status_code=404, log_message="You have no data to train on")
 
 class PredictOne(BaseHandler):
     def post(self):
         '''Predict the class of a sent feature vector
         '''
         data = json.loads(self.request.body.decode("utf-8"))
-
         print(data)
 
         vals = data['feature']
@@ -128,9 +125,7 @@ class PredictOne(BaseHandler):
         fvals = np.array(fvals).reshape(1, -1)
 
         if not self.clf:
-            # self.write_json({"error":"No Models have been created"})
-            raise HTTPError(404)
-
+            raise HTTPError(status_code=404, log_message="No models have been created")
         else:
             predLabel1 = self.clf["KNeighbors"].predict(fvals)
             predLabel2 = self.clf["RandomForest"].predict(fvals)
