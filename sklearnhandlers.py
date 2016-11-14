@@ -29,14 +29,11 @@ class PrintHandlers(BaseHandler):
 
 class GetClasses(BaseHandler):
     def get(self):
-        l=[];
         if self.db.labeledinstances.count() == 0:
             self.write_json({"error": "you have no classes bro"})
         else:
-            for a in self.db.labeledinstances.distinct('label'):
-                l.append(a)
-
-            self.write_json({"classes":l})
+            classes = self.db.labeledinstances.distinct('label'):
+            self.write_json({"classes":classes})
 
 
 class UploadLabeledDatapointsHandler(BaseHandler):
