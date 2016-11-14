@@ -118,7 +118,6 @@ class PredictOne(BaseHandler):
         '''Predict the class of a sent feature vector
         '''
         data = json.loads(self.request.body.decode("utf-8"))
-        print(data)
 
         vals = data['feature']
         fvals = [float(val) for val in vals]
@@ -132,7 +131,7 @@ class PredictOne(BaseHandler):
             RFTemp = self.db.models.find_one({"classifier":"RandomForest"})
             self.clf["KNeighbors"] = pickle.loads(KNTemp['model'])
             self.clf["RandomForest"] = pickle.loads(RFTemp['model'])
-            
+
         predLabel1 = self.clf["KNeighbors"].predict(fvals)
         predLabel2 = self.clf["RandomForest"].predict(fvals)
-        self.write_json({"predictionKN":str(predLabel1), "predictionRF":str(predLabel2)})
+        self.write_json({"predictionKN":predLabel1[0], "predictionRF":predLabel2[0]})
