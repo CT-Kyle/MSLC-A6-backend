@@ -36,7 +36,7 @@ class Application(tornado.web.Application):
         handlers = [(r"/[/]?", BaseHandler),
                     (r"/Handlers[/]?",        skh.PrintHandlers),
                     (r"/GetClasses[/]?",      skh.GetClasses),
-                    (r"/AddDataPoint[/]?",    skh.UploadLabeledDatapointHandler),
+                    (r"/AddDataPoint[/]?",    skh.UploadLabeledDatapointsHandler),
                     (r"/ClearDataset[/]?",    skh.ClearDataset),
                     (r"/UpdateModel[/]?",     skh.UpdateModel),
                     (r"/PredictOne[/]?",      skh.PredictOne),

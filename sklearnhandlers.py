@@ -39,23 +39,23 @@ class GetClasses(BaseHandler):
             self.write_json({"classes":l})
 
 
-class UploadLabeledDatapointHandler(BaseHandler):
+class UploadLabeledDatapointsHandler(BaseHandler):
     def post(self):
         '''Save data point and class label to database
         '''
         data = json.loads(self.request.body.decode("utf-8"))
 
-        print(data)
-
+        documents = []
+        fvals = []
         vals = data['feature']
-        fvals = [float(val) for val in vals]
-        label = data['label']
-        # sess  = data['dsid']
+        for i in vals:
+            fvals.append([float(val) for val in i])
+            documents.append({
+                'label': data['label'],
+                'feature': [float(val) for val in i]
+            })
 
-        dbid = self.db.labeledinstances.insert(
-            # {"feature":fvals,"label":label,"dsid":sess}
-            {"feature":fvals,"label":label}
-            );
+        dbid = self.db.labeledinstances.insert(documents);
         self.write_json({"id":str(dbid),"feature":fvals,"label":label})
 
 class SetParameters(BaseHandler):
