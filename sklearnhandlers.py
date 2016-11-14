@@ -33,8 +33,8 @@ class GetClasses(BaseHandler):
         if self.db.labeledinstances.count() == 0:
             self.write_json({"error": "you have no classes bro"})
         else:
-            for a in self.db.labeledinstances:
-                l.append(a['label'])
+            for a in self.db.labeledinstances.distinct('label'):
+                l.append(a)
 
             self.write_json({"classes":l})
 
@@ -52,7 +52,7 @@ class UploadLabeledDatapointsHandler(BaseHandler):
         for i in vals:
             fvals.append([float(val) for val in i])
             documents.append({
-                'label': data['label'],
+                'label': label,
                 'feature': [float(val) for val in i]
             })
 
