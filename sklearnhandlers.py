@@ -48,6 +48,7 @@ class UploadLabeledDatapointsHandler(BaseHandler):
         documents = []
         fvals = []
         vals = data['feature']
+        label = data['label']
         for i in vals:
             fvals.append([float(val) for val in i])
             documents.append({
