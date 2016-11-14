@@ -125,8 +125,14 @@ class PredictOne(BaseHandler):
         fvals = np.array(fvals).reshape(1, -1)
 
         if not self.clf:
-            raise HTTPError(status_code=404, log_message="No models have been created")
-        else:
-            predLabel1 = self.clf["KNeighbors"].predict(fvals)[0]
-            predLabel2 = self.clf["RandomForest"].predict(fvals)[0]
-            self.write_json({"predictionKN":str(predLabel1), "predictionRF":str(predLabel2)})
+            if self.db.models.count() == 0:
+                raise HTTPError(status_code=404, log_message="No models have been created")
+            print('Loading Model From DB')
+            KNTemp = self.db.models.find_one({"classifier":"KNeighbors"})
+            RFTemp = self.db.models.find_one({"classifier":"RandomForest"})
+            self.clf["KNeighbors"] = pickle.loads(KNTemp['model'])
+            self.clf["RandomForest"] = pickle.loads(RFTemp['model'])
+
+        predLabel1 = self.clf["KNeighbors"].predict(fvals)
+        predLabel2 = self.clf["RandomForest"].predict(fvals)
+        self.write_json({"predictionKN":predLabel1[0], "predictionRF":predLabel2[0]})
