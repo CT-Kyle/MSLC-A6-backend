@@ -58,8 +58,9 @@ class Application(tornado.web.Application):
 
         self.clf = {} # the classifier model (in-class assignment, you might need to change this line!)
         # but depending on your implementation, you may not need to change it  ¯\_(ツ)_/¯
-        self.KNeighborsParamN = 3
-        self.RandomForestParamN = 10
+        self.KNeighborsNParam = 3
+        self.KNeighborsAlgorithmParam = 'auto'
+        self.RandomForestNParam = 10
 
         settings = {'debug':True}
         tornado.web.Application.__init__(self, handlers, **settings)

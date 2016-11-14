@@ -61,8 +61,10 @@ class UploadLabeledDatapointsHandler(BaseHandler):
 class SetParameters(BaseHandler):
     def post(self):
         data = json.loads(self.request.body.decode("utf-8"))
-        self.KNeighborsParamN = data['KNeighborsParam']
-        self.RandomForestParamN = data['RandomForestParam']
+        self.KNeighborsNParam = data['KNeighborsN']
+        self.KNeighborsAlgorithmParam = data['KNeighborsAlg']
+        self.RandomForestNParam = data['RandomForestN']
+
 
 class ClearDataset(BaseHandler):
     def get(self):
@@ -75,7 +77,6 @@ class UpdateModel(BaseHandler):
     def get(self):
         '''Train a new model (or update) for given dataset ID
         '''
-        # dsid = self.get_int_arg("dsid",default=0)     ///remoivng dsid stuff
 
         # create feature vectors from database
         f=[];
@@ -88,9 +89,9 @@ class UpdateModel(BaseHandler):
             l.append(a['label'])
 
         # fit the model to the data
-        c1 = KNeighborsClassifier(n_neighbors=self.KNeighborsParamN);
+        c1 = KNeighborsClassifier(n_neighbors=self.KNeighborsNParam, algorithm=self.KNeighborsAlgorithmParam);
         acc1 = -1;
-        c2 = RandomForestClassifier(n_estimators=self.RandomForestParamN);
+        c2 = RandomForestClassifier(n_estimators=self.RandomForestNParam);
         acc2 = -1;
         if l:
             c1.fit(f,l) # training
@@ -127,15 +128,6 @@ class PredictOne(BaseHandler):
         vals = data['feature']
         fvals = [float(val) for val in vals]
         fvals = np.array(fvals).reshape(1, -1)
-        # dsid  = data['dsid']
-
-        # load the model from the database (using pickle)
-        # we are blocking tornado!! no!!
-
-        # if(dsid not in self.clf):
-        #     print('Loading Model From DB')
-        #     tmp = self.db.models.find_one({"dsid":dsid})
-        #     self.clf[dsid] = pickle.loads(tmp['model'])
 
         if not self.clf:
             # self.write_json({"error":"No Models have been created"})
