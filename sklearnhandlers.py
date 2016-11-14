@@ -32,7 +32,7 @@ class GetClasses(BaseHandler):
         if self.db.labeledinstances.count() == 0:
             self.write_json({"error": "you have no classes bro"})
         else:
-            classes = self.db.labeledinstances.distinct('label'):
+            classes = self.db.labeledinstances.distinct('label')
             self.write_json({"classes":classes})
 
 
