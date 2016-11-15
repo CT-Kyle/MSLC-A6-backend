@@ -41,6 +41,7 @@ class Application(tornado.web.Application):
                     (r"/UpdateModel[/]?",     skh.UpdateModel),
                     (r"/PredictOne[/]?",      skh.PredictOne),
                     (r"/SetParameters[/]?",   skh.SetParameters),
+                    (r"/GetParameters[/]?",   skh.GetParameters),
                     ]
 
         self.handlers_string = str(handlers)

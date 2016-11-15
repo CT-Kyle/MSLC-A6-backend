@@ -63,6 +63,14 @@ class SetParameters(BaseHandler):
         self.application.RandomForestNParam = data['RandomForestN']
         self.write_json({"status": "success"})
 
+class GetParameters(BaseHandler):
+    def get(self):
+        self.write_json({
+            'KNeighborsN': self.application.KNeighborsNParam,
+            'KNeighborsAlg': self.application.KNeighborsAlgorithmParam,
+            'RandomForestN': self.application.RandomForestNParam
+        })
+
 class ClearDataset(BaseHandler):
     def get(self):
         self.db.labeledinstances.remove()
@@ -135,4 +143,5 @@ class PredictOne(BaseHandler):
 
         predLabel1 = self.clf["KNeighbors"].predict(fvals)
         predLabel2 = self.clf["RandomForest"].predict(fvals)
+        print({"predictionKN":predLabel1[0], "predictionRF":predLabel2[0]})
         self.write_json({"predictionKN":predLabel1[0], "predictionRF":predLabel2[0]})
